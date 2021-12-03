@@ -96,13 +96,13 @@ if __name__ == '__main__':
             print('Epoch {}/{}'.format(epoch, epochs))
             print('-' * 10)
 
-            model.train()
-
             train_len = 0    
             running_loss = 0.0
             running_corrects = 0
             
             # 모델 학습
+            model.train()
+            
             for inputs, labels in tqdm(train_loader, desc='Train'):
                 inputs = inputs.to(device)
                 labels = labels.to(device)
@@ -130,16 +130,16 @@ if __name__ == '__main__':
 
             print('Train Loss: {:.4f} Acc: {:.4f}'.format(epoch_loss, epoch_acc))
             
+            # learning rate를 조절한다
             scheduler.step()
 
-            # Set model to evaluate mode
+            # 모델 검증
             model.eval()
 
             test_len = 0
             running_loss = 0.0
             running_corrects = 0
-            
-            # Iterate over data.
+            # hi
             for inputs, labels in tqdm(test_loader, desc='Test'):
                 inputs = inputs.to(device)
                 labels = labels.to(device)

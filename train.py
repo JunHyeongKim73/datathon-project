@@ -139,7 +139,7 @@ if __name__ == '__main__':
             test_len = 0
             running_loss = 0.0
             running_corrects = 0
-            
+            # hi
             for inputs, labels in tqdm(test_loader, desc='Test'):
                 inputs = inputs.to(device)
                 labels = labels.to(device)
