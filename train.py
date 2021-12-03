@@ -22,9 +22,9 @@ from sklearn.metrics import classification_report
 from foodDataset import FoodDataset
 from model import EffNetModel  
 from dataTransformer import DataTransformer
-# from foodDataset import AllDataset
 
 if __name__ == '__main__':
+    # 데이터 어그멘테이션 (학습용)
     train_transform = A.Compose([
         A.Resize(256, 256),
         A.CenterCrop(224, 224),
@@ -36,20 +36,20 @@ if __name__ == '__main__':
         A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ToTensorV2()
     ])
-    
+    # 데이터 변환 (검증용)
     test_transform = A.Compose([
         A.Resize(256, 256),
         A.CenterCrop(224, 224),
         A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ToTensorV2()
     ])
-    
-    dataset = FoodDataset(label='images_update.csv', root='kfoods')
+    # CustomDataset으로부터 데이터를 불러온다
+    dataset = FoodDataset(label='../images_update.csv', root='../kfoods')
     batch_size = 64
     epochs = 40
 
     kfold = KFold(n_splits=5, shuffle=True, random_state=42)
-    # K-Fold Cross Validation
+    # K-Fold 교차 검증
     best_models = [] # 폴드별로 가장 acc가 높은 모델 저장
     
     for fold_idx, (train_idx, test_idx) in enumerate(kfold.split(dataset), 1):
@@ -57,51 +57,52 @@ if __name__ == '__main__':
         train_subset = Subset(dataset, train_idx)
         test_subset = Subset(dataset, test_idx)
         
-        # Train & Test Transform 적용
+        # Train & Test Dataset에 각각 Transform을 적용
         train_dataset = DataTransformer(train_subset, train_transform);
         test_dataset = DataTransformer(test_subset, test_transform);
         
-        # DataLoader 정의
+        # Train & Test DataLoader 정의
         train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
         test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
         
-        # Load Model
+        # 모델 로드
         model_name = 'efficientnet-b0'
 
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         model = EffNetModel(model_name)
         model.to(device)
         
-        # Hyper Parameter
+        # 하이퍼 파라미터
         learning_rate = 0.001
         optimizer = optimizer.RAdam(model.parameters(), lr=learning_rate)
         criterion = nn.CrossEntropyLoss()
         scheduler = lr_scheduler.StepLR(optimizer=optimizer, step_size=7, gamma=0.1)
         
-        # Initialize Variables
+        # 학습에 필요한 변수를 초기화한다
         best_acc = 0.0
         best_loss = 0.0
         best_epoch = 0
         best_model = None
-
+        
+        # Early Stopping에 필요한 변수
         early_stop_cnt = 0
         early_stop = 7
         min_loss = 10^3
 
         since = time.time()
-
+        
         for epoch in range(epochs):
             epoch += 1
             print('Epoch {}/{}'.format(epoch, epochs))
             print('-' * 10)
 
-            model.train()
-
             train_len = 0    
             running_loss = 0.0
             running_corrects = 0
             
-            # Iterate over data.
+            # 모델 학습
+            model.train()
+            
             for inputs, labels in tqdm(train_loader, desc='Train'):
                 inputs = inputs.to(device)
                 labels = labels.to(device)
@@ -109,6 +110,8 @@ if __name__ == '__main__':
                 with torch.set_grad_enabled(True):
                     outputs = model(inputs)
                     _, preds = torch.max(outputs, 1)
+                    # CrossEntropyLoss는 정수형 label 데이터가 들어오면 
+                    # 원핫 인코딩으로 데이터를 변환한다
                     loss = criterion(outputs, labels)
                     # backward + optimize
                     loss.backward()
@@ -127,16 +130,16 @@ if __name__ == '__main__':
 
             print('Train Loss: {:.4f} Acc: {:.4f}'.format(epoch_loss, epoch_acc))
             
+            # learning rate를 조절한다
             scheduler.step()
 
-            # Set model to evaluate mode
+            # 모델 검증
             model.eval()
 
             test_len = 0
             running_loss = 0.0
             running_corrects = 0
             
-            # Iterate over data.
             for inputs, labels in tqdm(test_loader, desc='Test'):
                 inputs = inputs.to(device)
                 labels = labels.to(device)
@@ -179,14 +182,14 @@ if __name__ == '__main__':
             if early_stop_cnt > early_stop:
                 print('Early Stopped!!')
                 break
-
+                
         time_elapsed = time.time() - since
         print('Training complete in {:.0f}m {:.0f}s'.format(
             time_elapsed // 60, time_elapsed % 60))
         print('Best val Acc: {:4f}'.format(best_acc))
         # Save the Best Model
-        PATH = "models/"
-        torch.save(best_model, f'{PATH}{fold_idx}_{model_name}_{best_acc:.4f}_{best_loss:.4f}_epoch_{best_epoch}.pth')
+        path = f'../models/{fold_idx}_{model_name}_{best_acc:.4f}_{best_loss:.4f}_epoch_{best_epoch}.pth'
+        torch.save(best_model.state_dict(), path)
         # 폴드별로 가장 좋은 모델 저장
         best_models.append(best_model)
         # 현재 1 Fold로만 진행
