@@ -23,6 +23,15 @@ from foodDataset import FoodDataset
 from model import EffNetModel  
 from dataTransformer import DataTransformer
 
+def seed_everything(seed: int = 42):
+    random.seed(seed)
+    np.random.seed(seed)
+    os.environ["PYTHONASHSEED"] = str(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = True
+
 if __name__ == '__main__':
     # 데이터 어그멘테이션 (학습용)
     train_transform = A.Compose([
@@ -48,7 +57,7 @@ if __name__ == '__main__':
     batch_size = 64
     epochs = 40
 
-    kfold = KFold(n_splits=5, shuffle=True, random_state=42)
+    kfold = KFold(n_splits=5, shuffle=True)
     # K-Fold 교차 검증
     best_models = [] # 폴드별로 가장 acc가 높은 모델 저장
     
@@ -108,6 +117,8 @@ if __name__ == '__main__':
                 labels = labels.to(device)
                 
                 # forward
+                # 자동 미분 엔진 torch.autograd를 True로 설정하여
+                # 순전파 + 역전파 모두 가능하게 함
                 with torch.set_grad_enabled(True):
                     # loss.backward()를 하면 매번 gradient가 축적된다.
                     # 따라서 모델 파라미터를 정확하게 업데이트 하기 위해서는
@@ -139,17 +150,21 @@ if __name__ == '__main__':
             scheduler.step()
 
             # 모델 검증
+            # dropout, batchnorm을 동작하지 않게 설정한다
             model.eval()
 
             test_len = 0
             running_loss = 0.0
             running_corrects = 0
-            # hi
+            
             for inputs, labels in tqdm(test_loader, desc='Test'):
                 inputs = inputs.to(device)
                 labels = labels.to(device)
                 
                 # forward
+                # 순전파 연산만 필요하므로 False로 설정
+                # autograd를 끔으로써 메모리 사용량을 줄이고 연산 속도 높인다
+                # torch.no_grad() == torch.set_grad_enabled(False)
                 with torch.set_grad_enabled(False):
                     optimizer.zero_grad()
                     
