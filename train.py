@@ -106,17 +106,24 @@ if __name__ == '__main__':
             for inputs, labels in tqdm(train_loader, desc='Train'):
                 inputs = inputs.to(device)
                 labels = labels.to(device)
+                
                 # forward
+                # 자동 미분 엔진 torch.autograd를 True로 설정하여
+                # 순전파 + 역전파 모두 가능하게 함
                 with torch.set_grad_enabled(True):
+                    # loss.backward()를 하면 매번 gradient가 축적된다.
+                    # 따라서 모델 파라미터를 정확하게 업데이트 하기 위해서는
+                    # 모델 학습을 시작할 때 gradient를 zero로 만들어야 한다
+                    optimizer.zero_grad()
                     outputs = model(inputs)
                     _, preds = torch.max(outputs, 1)
+                    
                     # CrossEntropyLoss는 정수형 label 데이터가 들어오면 
                     # 원핫 인코딩으로 데이터를 변환한다
                     loss = criterion(outputs, labels)
-                    # backward + optimize
+                    # backward
                     loss.backward()
                     optimizer.step()
-                    optimizer.zero_grad()
 
                 # statistics
                 batch_size = inputs.size(0)
@@ -139,15 +146,17 @@ if __name__ == '__main__':
             test_len = 0
             running_loss = 0.0
             running_corrects = 0
-            # hi
+            
             for inputs, labels in tqdm(test_loader, desc='Test'):
                 inputs = inputs.to(device)
                 labels = labels.to(device)
-                # zero the parameter gradients
-                optimizer.zero_grad()
+                
                 # forward
-                # track history if only in train
+                # 순전파 연산만 필요하므로 False로 설정
+                # torch.no_grad() == torch.set_grad_enabled(False)
                 with torch.set_grad_enabled(False):
+                    optimizer.zero_grad()
+                    
                     outputs = model(inputs)
                     _, preds = torch.max(outputs, 1)
                     loss = criterion(outputs, labels)
@@ -164,14 +173,16 @@ if __name__ == '__main__':
 
             print('Test Loss: {:.4f} Acc: {:.4f}'.format(epoch_loss, epoch_acc))
             
-            # Save the Best Model Information
+            # Best 모델의 정보를 저장한다
             if epoch_acc > best_acc:
                 early_stop_cnt = 0
                 best_acc = epoch_acc
                 best_loss = epoch_loss
                 best_epoch = epoch
                 best_model = model
-
+            
+            # Early Stopping
+            # acc 혹은 loss가 갱신되면 다시 카운트를 센다.
             elif epoch_loss < min_loss:
                 early_stop_cnt = 0
                 min_loss = epoch_loss

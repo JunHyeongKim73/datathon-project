@@ -10,6 +10,8 @@ import time
 class FoodDataset(Dataset):
     def __init__(self, label, root):
         self.img_dir = root 
+        
+        # image + label DataFrame
         self.img_labels = pd.read_csv(label, names=['path', 'label'])
         self.num_per_class = 500
         
@@ -32,6 +34,7 @@ class FoodDataset(Dataset):
         
         return (img, label)
     
+    # 클래스당 N개의 인덱스를 모은 리스트를 반환한다
     def getIndicies(self, num_per_class):
         index_lists = []
         for label in range(150):
@@ -40,22 +43,3 @@ class FoodDataset(Dataset):
             index_lists.extend(lists)
         
         return index_lists
-    
-# class AllDataset(Dataset):
-#     def __init__(self, label, root):
-#         self.img_dir = root 
-#         self.img_labels = pd.read_csv(label, names=['path', 'label'])
-        
-#     def __len__(self):
-#         return len(self.img_labels)
-    
-#     def __getitem__(self, idx):
-#         img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
-#         # image 불러오기
-#         img = cv2.imread(img_path)
-#         if img is None:
-#             print(img_path[7:])
-#         # label 불러오기
-#         label = self.img_labels.iloc[idx, 1]
-        
-#         return (img, label)
