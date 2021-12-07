@@ -75,7 +75,7 @@ if __name__ == '__main__':
         test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
         
         # 모델 로드
-        model_name = 'efficientnet-b0'
+        model_name = 'efficientnet-b1'
 
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         model = EffNetModel(model_name)
